@@ -1,4 +1,3 @@
-
 ## Backup your files to S3  
 
 This is a simple ruby script which wraps the [s3 command line client](http://s3tools.org/s3cmd) 
@@ -9,7 +8,7 @@ started you can:
 
 * pull down this repo   
 * from the root of this repository, run `./s3/s3cmd --configure` to set up your S3 credentials  
-* rename backup.yml.default => backup.yml  
+* `mv backup.yml.default backup.yml`  
 * edit backup.yml to list the directories you wish to back up, and file types to ignore.  
 * run `ruby backup.rb --backup` to start it up!  
 * run `ruby backup.rb --help` to see some other helpful options    
