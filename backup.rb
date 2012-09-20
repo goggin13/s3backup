@@ -147,11 +147,13 @@ class Backup
     
     raw = raw / (1024.0 * 1024.0)
     zipped = zipped / (1024.0 * 1024.0)
+    cost = (zipped / 1000) * @config['s3_storage_rate_per_gb']
     
     puts "Currently Storing:"
     puts "\t#{count} files"
     puts "\t#{raw}  uncompressed MB"
     puts "\t#{zipped}  compressed MB"
+    puts "\t#{cost} dollars per month"
   end
 
   def view_files
