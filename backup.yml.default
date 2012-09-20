@@ -1,0 +1,29 @@
+
+# COPY THIS TO backup.yml
+
+# S3 bucket to store backed up items in
+bucket_name: YOUR-BUCKET-NAME
+
+# http://aws.amazon.com/s3/pricing/
+s3_storage_rate_per_gb: 0.125
+
+# List of the FULL PATH of files to back up, or
+# regexs to locate files
+#   e.g. /Users/goggin/Documents NOT ~/Documents
+#   if you want to run this as a cron job, cron does not run as you
+directories:
+    - /Users/goggin/Documents/undergrad/**/*
+    - /Users/goggin/Documents/CS/**/*
+    - /Users/goggin/Documents/reading/**/*
+    - /Users/goggin/meng/**/*
+    - /Users/goggin/projects/**/*
+
+# don't backup files with these extensions
+ignore_extensions:
+    - .java~
+    - .class
+    - .pyc
+    - .bak
+    - .cmo
+    - .cmi
+    - .dll
