@@ -55,41 +55,38 @@ class Backup
     end
   end
 
-  def upload_file(local_path, mtime)
-    local_path_escaped = local_path[1..-1].split("/").map { |s| "'#{s}'" }.join("/")
-    remote_path = "s3://#{@bucket_name}/#{local_path_escaped}"
-    local_zipped_path = '/tmp/temp.txt.gz'
-    
-    cmd = "gzip --stdout /#{local_path_escaped} > #{local_zipped_path}"
+  def try_cmd(cmd)
     system(cmd)
     if $? != 0
       puts "\tFAILED\n#{cmd}\n"
       raise SystemExit.new
     end
+  end
+
+  def upload_file(local_path, mtime)
+    local_path_escaped = local_path[1..-1].split("/").map { |s| "'#{s}'" }.join("/")
+    remote_path = "s3://#{@bucket_name}/#{local_path_escaped}"
+    local_zipped_path = '/tmp/temp.txt.gz'
     
-    unless File.extname(remote_path) == '.gz'
-      remote_path += '.gz'
-    end
+    try_cmd "gzip --stdout /#{local_path_escaped} > #{local_zipped_path}"
     
-    cmd = "./s3/s3cmd put #{local_zipped_path} #{remote_path}"
-    system(cmd)
-    if $? == 0
-      @log[local_path] = {
-        :mtime => mtime,
-        :raw_size => File.size(local_path),
-        :compressed_size => File.size(local_zipped_path)
-      }
-      system("rm #{local_zipped_path}")
-    else
-      puts "\tFAILED\n#{cmd}\n"
-      raise SystemExit.new
-    end
+    remote_path += '.gz' unless File.extname(remote_path) == '.gz'
+    
+    try_cmd "./s3/s3cmd put #{local_zipped_path} #{remote_path}"
+    @log[local_path] = {
+      :mtime => mtime,
+      :raw_size => File.size(local_path),
+      :compressed_size => File.size(local_zipped_path)
+    }
+    puts @log.length
+    File.write('log.js', JSON.generate(@log))
+    system("rm #{local_zipped_path}")
   end
   
   def iterate_dirty_files
     iterate_files do |local_path| 
       mtime = File.mtime(local_path).to_i
-      next if (@log.has_key? local_path) && @log[local_path][:mtime] == mtime
+      next if (@log.has_key? local_path) && @log[local_path]['mtime'] == mtime
       yield local_path, mtime
     end
   end
