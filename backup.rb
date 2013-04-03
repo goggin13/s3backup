@@ -1,3 +1,5 @@
+# encoding: utf-8
+
 require 'yaml'
 require 'json'
 
@@ -36,7 +38,7 @@ class Backup
     begin
       do_backup_inner dry_run
     ensure
-      unless dry_run
+      if @log.length > 0 && !dry_run
         File.write('log.js', JSON.generate(@log))
         puts "wrote log file"
       end
@@ -63,6 +65,12 @@ class Backup
     end
   end
 
+  def sanitize_file_name(name)
+    name.gsub! "’", ""
+
+    name
+  end
+
   def upload_file(local_path, mtime)
     local_path_escaped = local_path[1..-1].split("/").map { |s| "'#{s}'" }.join("/")
     remote_path = "s3://#{@bucket_name}/#{local_path_escaped}"
@@ -71,22 +79,21 @@ class Backup
     try_cmd "gzip --stdout /#{local_path_escaped} > #{local_zipped_path}"
     
     remote_path += '.gz' unless File.extname(remote_path) == '.gz'
-    
+    remote_path = sanitize_file_name(remote_path)
+
     try_cmd "./s3/s3cmd put #{local_zipped_path} #{remote_path}"
     @log[local_path] = {
       :mtime => mtime,
       :raw_size => File.size(local_path),
       :compressed_size => File.size(local_zipped_path)
     }
-    puts @log.length
-    File.write('log.js', JSON.generate(@log))
     system("rm #{local_zipped_path}")
   end
   
   def iterate_dirty_files
     iterate_files do |local_path| 
       mtime = File.mtime(local_path).to_i
-      next if (@log.has_key? local_path) && @log[local_path]['mtime'] == mtime
+      next if (@log.has_key? local_path) && @log[local_path]['mtime'].to_i == mtime
       yield local_path, mtime
     end
   end
@@ -99,7 +106,9 @@ class Backup
         next unless File.exist? local_path
         next if File.symlink? local_path
         next if File.directory? local_path
-        next if @config['ignore_extensions'].include? File.extname(local_path)
+        next if local_path.index "'"
+        next if local_path.index "("
+        next if @config['ignore_extensions'].include? File.extname(local_path).downcase
 
         yield local_path
       end
